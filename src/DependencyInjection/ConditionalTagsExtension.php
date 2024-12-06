@@ -8,6 +8,7 @@ use Nette\Schema\Expect;
 use PHPStan\Analyser\TypeSpecifierFactory;
 use PHPStan\Broker\BrokerFactory;
 use PHPStan\Collectors\RegistryFactory as CollectorRegistryFactory;
+use PHPStan\DependencyInjection\Type\LazyDynamicParameterTypeExtensionProvider;
 use PHPStan\DependencyInjection\Type\LazyDynamicThrowTypeExtensionProvider;
 use PHPStan\DependencyInjection\Type\LazyParameterClosureTypeExtensionProvider;
 use PHPStan\DependencyInjection\Type\LazyParameterOutTypeExtensionProvider;
@@ -49,6 +50,9 @@ final class ConditionalTagsExtension extends CompilerExtension
 			TypeSpecifierFactory::STATIC_METHOD_TYPE_SPECIFYING_EXTENSION_TAG => $bool,
 			RichParser::VISITOR_SERVICE_TAG => $bool,
 			CollectorRegistryFactory::COLLECTOR_TAG => $bool,
+			LazyDynamicParameterTypeExtensionProvider::FUNCTION_TAG => $bool,
+			LazyDynamicParameterTypeExtensionProvider::METHOD_TAG => $bool,
+			LazyDynamicParameterTypeExtensionProvider::STATIC_METHOD_TAG => $bool,
 			LazyDynamicThrowTypeExtensionProvider::FUNCTION_TAG => $bool,
 			LazyDynamicThrowTypeExtensionProvider::METHOD_TAG => $bool,
 			LazyDynamicThrowTypeExtensionProvider::STATIC_METHOD_TAG => $bool,

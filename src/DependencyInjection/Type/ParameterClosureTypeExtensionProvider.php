@@ -6,6 +6,10 @@ use PHPStan\Type\FunctionParameterClosureTypeExtension;
 use PHPStan\Type\MethodParameterClosureTypeExtension;
 use PHPStan\Type\StaticMethodParameterClosureTypeExtension;
 
+/**
+ * @deprecated
+ * @see \PHPStan\DependencyInjection\Type\DynamicParameterTypeExtensionProvider
+ */
 interface ParameterClosureTypeExtensionProvider
 {
 

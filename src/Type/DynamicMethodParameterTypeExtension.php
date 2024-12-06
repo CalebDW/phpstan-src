@@ -8,23 +8,21 @@ use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ParameterReflection;
 
 /**
- * This is the interface for parameter closure type extensions for methods.
+ * This is the interface for dynamic parameter type extensions for methods.
  *
- * To register it in the configuration file use the `phpstan.methodParameterClosureTypeExtension` service tag:
+ * To register it in the configuration file use the `phpstan.dynamicMethodParameterTypeExtension` service tag:
  *
  * ```
  * services:
  * 	-
  *		class: App\PHPStan\MyExtension
  *		tags:
- *			- phpstan.methodParameterClosureTypeExtension
+ *			- phpstan.dynamicMethodParameterTypeExtension
  * ```
  *
  * @api
- * @deprecated
- * @see \PHPStan\Type\DynamicMethodParameterTypeExtension
  */
-interface MethodParameterClosureTypeExtension
+interface DynamicMethodParameterTypeExtension
 {
 
 	public function isMethodSupported(MethodReflection $methodReflection, ParameterReflection $parameter): bool;

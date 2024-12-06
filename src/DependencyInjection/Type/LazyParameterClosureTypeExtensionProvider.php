@@ -4,6 +4,10 @@ namespace PHPStan\DependencyInjection\Type;
 
 use PHPStan\DependencyInjection\Container;
 
+/**
+ * @deprecated
+ * @see \PHPStan\DependencyInjection\Type\LazyDynamicParameterTypeExtensionProvider
+ */
 final class LazyParameterClosureTypeExtensionProvider implements ParameterClosureTypeExtensionProvider
 {
 

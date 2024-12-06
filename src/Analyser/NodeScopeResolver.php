@@ -62,6 +62,7 @@ use PHPStan\BetterReflection\Reflector\Reflector;
 use PHPStan\BetterReflection\SourceLocator\Ast\Strategy\NodeToReflection;
 use PHPStan\BetterReflection\SourceLocator\Located\LocatedSource;
 use PHPStan\DependencyInjection\Reflection\ClassReflectionExtensionRegistryProvider;
+use PHPStan\DependencyInjection\Type\DynamicParameterTypeExtensionProvider;
 use PHPStan\DependencyInjection\Type\DynamicThrowTypeExtensionProvider;
 use PHPStan\DependencyInjection\Type\ParameterClosureTypeExtensionProvider;
 use PHPStan\DependencyInjection\Type\ParameterOutTypeExtensionProvider;
@@ -251,6 +252,7 @@ final class NodeScopeResolver
 		private readonly TypeSpecifier $typeSpecifier,
 		private readonly DynamicThrowTypeExtensionProvider $dynamicThrowTypeExtensionProvider,
 		private readonly ReadWritePropertiesExtensionProvider $readWritePropertiesExtensionProvider,
+		private readonly DynamicParameterTypeExtensionProvider $dynamicParameterTypeExtensionProvider,
 		private readonly ParameterClosureTypeExtensionProvider $parameterClosureTypeExtensionProvider,
 		private readonly ScopeFactory $scopeFactory,
 		private readonly bool $polluteScopeWithLoopInitialAssignments,
@@ -4659,7 +4661,8 @@ final class NodeScopeResolver
 				}
 
 				if ($parameter !== null) {
-					$overwritingParameterType = $this->getParameterTypeFromParameterClosureTypeExtension($callLike, $calleeReflection, $parameter, $scopeToPass);
+					$overwritingParameterType = $this->getParameterTypeFromDynamicParameterTypeExtension($callLike, $calleeReflection, $parameter, $scopeToPass);
+						?? $this->getParameterTypeFromParameterClosureTypeExtension($callLike, $calleeReflection, $parameter, $scopeToPass);
 
 					if ($overwritingParameterType !== null) {
 						$parameterType = $overwritingParameterType;
@@ -4711,7 +4714,8 @@ final class NodeScopeResolver
 				}
 
 				if ($parameter !== null) {
-					$overwritingParameterType = $this->getParameterTypeFromParameterClosureTypeExtension($callLike, $calleeReflection, $parameter, $scopeToPass);
+					$overwritingParameterType = $this->getParameterTypeFromDynamicParameterTypeExtension($callLike, $calleeReflection, $parameter, $scopeToPass);
+						?? $this->getParameterTypeFromParameterClosureTypeExtension($callLike, $calleeReflection, $parameter, $scopeToPass);
 
 					if ($overwritingParameterType !== null) {
 						$parameterType = $overwritingParameterType;
@@ -4726,6 +4730,7 @@ final class NodeScopeResolver
 				}
 			} else {
 				$exprType = $scope->getType($arg->value);
+				// maybe here?
 				$exprResult = $this->processExprNode($stmt, $arg->value, $scopeToPass, $nodeCallback, $context->enterDeep());
 				$throwPoints = array_merge($throwPoints, $exprResult->getThrowPoints());
 				$impurePoints = array_merge($impurePoints, $exprResult->getImpurePoints());
@@ -4856,6 +4861,53 @@ final class NodeScopeResolver
 		}
 
 		return new ExpressionResult($scope, $hasYield, $throwPoints, $impurePoints);
+	}
+
+	/**
+	 * @param MethodReflection|FunctionReflection|null $calleeReflection
+	 */
+	private function getParameterTypeFromDynamicParameterTypeExtension(CallLike $callLike, $calleeReflection, ParameterReflection $parameter, MutatingScope $scope): ?Type
+	{
+		$types = [];
+		if ($callLike instanceof FuncCall && $calleeReflection instanceof FunctionReflection) {
+			foreach ($this->dynamicParameterTypeExtensionProvider->getDyamicFunctionParameterTypeExtensions() as $dynamicFunctionParameterTypeExtension) {
+				if (!$dynamicFunctionParameterTypeExtension->isFunctionSupported($calleeReflection, $parameter)) {
+					continue;
+				}
+				$type = $dynamicFunctionParameterTypeExtension->getTypeFromFunctionCall($calleeReflection, $callLike, $parameter, $scope);
+				if ($type !== null) {
+					$types[] = $type;
+				}
+			}
+		} elseif ($calleeReflection instanceof MethodReflection) {
+			if ($callLike instanceof StaticCall) {
+				foreach ($this->dynamicParameterTypeExtensionProvider->getDynamicStaticMethodParameterTypeExtensions() as $dynamicStaticMethodParameterTypeExtension) {
+					if (!$dynamicStaticMethodParameterTypeExtension->isStaticMethodSupported($calleeReflection, $parameter)) {
+						continue;
+					}
+					$types = $dynamicStaticMethodParameterTypeExtension->getTypeFromStaticMethodCall($calleeReflection, $callLike, $parameter, $scope);
+					if ($type !== null) {
+						$types[] = $type;
+					}
+				}
+			} elseif ($callLike instanceof MethodCall) {
+				foreach ($this->dynamicParameterTypeExtensionProvider->getDynamicMethodParameterTypeExtensions() as $dynamicMethodParameterTypeExtension) {
+					if (!$dynamicMethodParameterTypeExtension->isMethodSupported($calleeReflection, $parameter)) {
+						continue;
+					}
+					$type = $dynamicMethodParameterTypeExtension->getTypeFromMethodCall($calleeReflection, $callLike, $parameter, $scope);
+					if ($type !== null) {
+						$types[] = $type;
+					}
+				}
+			}
+		}
+
+		return match (count($types)) {
+			0 => null,
+			1 => $types[0],
+			default => TypeCombinator::union(...$types),
+		};
 	}
 
 	/**
